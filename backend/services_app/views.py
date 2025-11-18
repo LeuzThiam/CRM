@@ -1,5 +1,8 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework import serializers as drf_serializers
 from accounts.permissions import IsEntreprise
+from entreprises.models import Entreprise
 from .models import Service
 from .serializers import ServiceSerializer
 
@@ -9,11 +12,18 @@ class EntrepriseServiceListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsEntreprise]
 
     def get_queryset(self):
-        return Service.objects.filter(entreprise__user=self.request.user)
+        try:
+            entreprise = Entreprise.objects.get(user=self.request.user)
+            return Service.objects.filter(entreprise=entreprise)
+        except Entreprise.DoesNotExist:
+            return Service.objects.none()
 
     def perform_create(self, serializer):
-        entreprise = self.request.user.entreprise_profile
-        serializer.save(entreprise=entreprise)
+        try:
+            entreprise = Entreprise.objects.get(user=self.request.user)
+            serializer.save(entreprise=entreprise)
+        except Entreprise.DoesNotExist:
+            raise drf_serializers.ValidationError('Profil entreprise introuvable.')
 
 
 class EntrepriseServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -21,4 +31,8 @@ class EntrepriseServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsEntreprise]
 
     def get_queryset(self):
-        return Service.objects.filter(entreprise__user=self.request.user)
+        try:
+            entreprise = Entreprise.objects.get(user=self.request.user)
+            return Service.objects.filter(entreprise=entreprise)
+        except Entreprise.DoesNotExist:
+            return Service.objects.none()

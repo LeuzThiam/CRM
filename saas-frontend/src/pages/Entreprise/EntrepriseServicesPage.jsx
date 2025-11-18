@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import SidebarEntreprise from '../../components/layout/SidebarEntreprise'
 import {
-  getEntrepriseServicesMe,
-  createEntrepriseService,
-  updateEntrepriseService,
-  deleteEntrepriseService
+  getMesServices,
+  createService,
+  updateService,
+  deleteService
 } from '../../services/entrepriseApi'
 import Loader from '../../components/ui/Loader'
 import Alert from '../../components/ui/Alert'
+import { extractResults } from '../../utils/pagination'
 
 export default function EntrepriseServicesPage() {
   const [services, setServices] = useState([])
@@ -28,8 +29,9 @@ export default function EntrepriseServicesPage() {
   async function loadServices() {
     try {
       setLoading(true)
-      const data = await getEntrepriseServicesMe()
-      setServices(data)
+      const data = await getMesServices()
+      const results = extractResults(data)
+      setServices(results)
     } catch (err) {
       console.error(err)
       setError('Erreur lors du chargement des services.')
@@ -47,9 +49,9 @@ export default function EntrepriseServicesPage() {
     setError(null)
     try {
       if (editingId) {
-        await updateEntrepriseService(editingId, form)
+        await updateService(editingId, form)
       } else {
-        await createEntrepriseService(form)
+        await createService(form)
       }
       setForm({ nom: '', description: '', duree_minutes: 60, prix: 0 })
       setEditingId(null)
@@ -63,17 +65,27 @@ export default function EntrepriseServicesPage() {
   const handleEdit = (service) => {
     setEditingId(service.id)
     setForm({
-      nom: service.nom,
-      description: service.description,
-      duree_minutes: service.duree_minutes,
-      prix: service.prix
+      nom: service.nom || '',
+      description: service.description || '',
+      duree_minutes: service.duree_minutes || 60,
+      prix: service.prix || 0
     })
+  }
+
+  const handleCancel = () => {
+    setForm({
+      nom: '',
+      description: '',
+      duree_minutes: 60,
+      prix: 0
+    })
+    setEditingId(null)
   }
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce service ?')) return
     try {
-      await deleteEntrepriseService(id)
+      await deleteService(id)
       await loadServices()
     } catch (err) {
       console.error(err)
@@ -82,12 +94,12 @@ export default function EntrepriseServicesPage() {
   }
 
   return (
-    <div className="container py-4">
+    <div className="container-fluid py-4">
       <div className="row">
-        <div className="col-md-3">
+        <div className="col-md-3 col-lg-2">
           <SidebarEntreprise />
         </div>
-        <div className="col-md-9">
+        <div className="col-md-9 col-lg-10">
           <h3 className="mb-3">Mes services</h3>
           {error && <Alert type="danger">{error}</Alert>}
 
@@ -140,6 +152,15 @@ export default function EntrepriseServicesPage() {
               </div>
             </div>
             <div className="card-footer text-end">
+              {editingId && (
+                <button 
+                  type="button" 
+                  className="btn btn-outline-secondary me-2" 
+                  onClick={handleCancel}
+                >
+                  Annuler
+                </button>
+              )}
               <button className="btn btn-primary" type="submit">
                 {editingId ? 'Mettre à jour' : 'Ajouter'}
               </button>

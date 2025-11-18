@@ -1,41 +1,51 @@
 import React from 'react'
 import { formatDate, formatTime } from '../../utils/dateUtils'
 
-export default function ReservationItem({ reservation, onChangeStatus }) {
+export default function ReservationItem({ reservation }) {
+  const getStatusBadgeClass = (statut) => {
+    const classes = {
+      en_attente: 'warning',
+      confirme: 'success',
+      annule: 'danger',
+      termine: 'info'
+    }
+    return classes[statut] || 'secondary'
+  }
+
   return (
-    <tr>
-      <td>{reservation.id}</td>
-      <td>{reservation.client?.user?.username || reservation.client_name || '-'}</td>
-      <td>{reservation.service?.nom || '-'}</td>
-      <td>{formatDate(reservation.date)}</td>
-      <td>{formatTime(reservation.heure_debut)} - {formatTime(reservation.heure_fin)}</td>
-      <td>
-        <span className="badge bg-secondary text-uppercase">{reservation.statut}</span>
-      </td>
-      <td>
-        {onChangeStatus && (
-          <div className="btn-group btn-group-sm" role="group">
-            <button
-              className="btn btn-outline-success"
-              onClick={() => onChangeStatus(reservation.id, 'confirme')}
-            >
-              Confirmer
-            </button>
-            <button
-              className="btn btn-outline-danger"
-              onClick={() => onChangeStatus(reservation.id, 'annule')}
-            >
-              Annuler
-            </button>
-            <button
-              className="btn btn-outline-secondary"
-              onClick={() => onChangeStatus(reservation.id, 'termine')}
-            >
-              Terminer
-            </button>
+    <div className="card">
+      <div className="card-body">
+        <div className="row align-items-center">
+          <div className="col-md-8">
+            <h5 className="card-title">
+              {reservation.entreprise?.nom || 'Entreprise'} - {reservation.service?.nom || 'Service'}
+            </h5>
+            <p className="card-text mb-1">
+              <i className="bi bi-calendar me-1" />
+              {formatDate(reservation.date)} à {formatTime(reservation.heure_debut)} - {formatTime(reservation.heure_fin)}
+            </p>
+            {reservation.commentaire_client && (
+              <p className="card-text">
+                <small className="text-muted">
+                  <strong>Mon commentaire :</strong> {reservation.commentaire_client}
+                </small>
+              </p>
+            )}
+            {reservation.commentaire_entreprise && (
+              <p className="card-text">
+                <small className="text-muted">
+                  <strong>Commentaire entreprise :</strong> {reservation.commentaire_entreprise}
+                </small>
+              </p>
+            )}
           </div>
-        )}
-      </td>
-    </tr>
+          <div className="col-md-4 text-end">
+            <span className={`badge bg-${getStatusBadgeClass(reservation.statut)} mb-2`}>
+              {reservation.statut}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

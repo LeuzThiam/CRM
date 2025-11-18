@@ -25,14 +25,33 @@ export async function loginApi({ username, email, password }) {
 // -----------------------------
 // REGISTER
 // -----------------------------
-export async function registerApi({ username, email, password, role }) {
-  // Le backend Django attend exactement :
-  // username, email, password, role
+export async function registerApi({ 
+  username, 
+  email, 
+  password, 
+  role,
+  nom_entreprise,
+  description_entreprise,
+  domaine_entreprise,
+  adresse_entreprise,
+  ville_entreprise,
+  telephone_entreprise
+}) {
   const payload = {
     username,
     email,
     password,
     role,
+  }
+
+  // Ajouter les champs entreprise si le rôle est entreprise
+  if (role === 'entreprise') {
+    if (nom_entreprise) payload.nom_entreprise = nom_entreprise
+    if (description_entreprise) payload.description_entreprise = description_entreprise
+    if (domaine_entreprise) payload.domaine_entreprise = domaine_entreprise
+    if (adresse_entreprise) payload.adresse_entreprise = adresse_entreprise
+    if (ville_entreprise) payload.ville_entreprise = ville_entreprise
+    if (telephone_entreprise) payload.telephone_entreprise = telephone_entreprise
   }
 
   const response = await apiClient.post('/auth/register/', payload)

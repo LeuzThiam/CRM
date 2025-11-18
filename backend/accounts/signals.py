@@ -15,7 +15,11 @@ def create_profile_for_new_user(sender, instance, created, **kwargs):
 
     if role == 'client':
         Client = django_apps.get_model('clients', 'Client')
-        Client.objects.create(user=instance)
+        # Ne créer que si le profil n'existe pas déjà
+        if not Client.objects.filter(user=instance).exists():
+            Client.objects.create(user=instance)
     elif role == 'entreprise':
         Entreprise = django_apps.get_model('entreprises', 'Entreprise')
-        Entreprise.objects.create(user=instance, nom=instance.username)
+        # Ne créer que si le profil n'existe pas déjà (peut être créé par le serializer)
+        if not Entreprise.objects.filter(user=instance).exists():
+            Entreprise.objects.create(user=instance, nom=instance.username)

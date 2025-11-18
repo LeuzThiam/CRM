@@ -1,7 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { getMe, loginApi, registerApi } from "../services/authApi";
 
-const AuthContext = createContext(null);
+// Valeur par défaut pour le contexte
+const defaultAuthValue = {
+  user: null,
+  role: null,
+  isAuthenticated: false,
+  loading: true,
+  login: async () => {},
+  register: async () => {},
+  logout: () => {},
+  loadUser: async () => {},
+};
+
+const AuthContext = createContext(defaultAuthValue);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -92,5 +104,7 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  // Le contexte ne sera jamais null maintenant car on a une valeur par défaut
+  return context;
 }

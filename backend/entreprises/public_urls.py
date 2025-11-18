@@ -8,7 +8,7 @@ from .views import (
 
 urlpatterns = [
     path('', EntrepriseListView.as_view(), name='entreprise-list'),
-    path('<int:pk>/', EntrepriseDetailView.as_view(), name='entreprise-detail'),
-    path('<int:pk>/services/', EntrepriseServicesPublicView.as_view(), name='entreprise-services-public'),
-    path('<int:pk>/disponibilites/', EntrepriseDisponibilitesPublicView.as_view(), name='entreprise-disponibilites-public'),
+    path('<int:id>/', EntrepriseDetailView.as_view(), name='entreprise-detail'),
+    path('<int:id>/services/', EntrepriseServicesPublicView.as_view(), name='entreprise-services-public'),
+    path('<int:id>/disponibilites/', EntrepriseDisponibilitesPublicView.as_view(), name='entreprise-disponibilites-public'),
 ]

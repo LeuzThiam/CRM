@@ -16,20 +16,44 @@ class EntrepriseListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        qs = Entreprise.objects.filter(est_valide=True)
+        qs = Entreprise.objects.filter(est_valide=True).select_related('user')
+        
+        # Recherche par nom d'entreprise
+        nom = self.request.query_params.get('nom')
+        if nom:
+            qs = qs.filter(nom__icontains=nom)
+        
+        # Recherche par domaine
         domaine = self.request.query_params.get('domaine')
-        ville = self.request.query_params.get('ville')
         if domaine:
             qs = qs.filter(domaine__icontains=domaine)
+        
+        # Recherche par ville
+        ville = self.request.query_params.get('ville')
         if ville:
             qs = qs.filter(ville__icontains=ville)
-        return qs
+        
+        # Recherche globale (nom, domaine ou description)
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(nom__icontains=search) |
+                Q(domaine__icontains=search) |
+                Q(description__icontains=search) |
+                Q(ville__icontains=search)
+            )
+        
+        return qs.order_by('nom')
 
 
 class EntrepriseDetailView(generics.RetrieveAPIView):
-    queryset = Entreprise.objects.filter(est_valide=True)
     serializer_class = EntreprisePublicSerializer
     permission_classes = [permissions.AllowAny]
+    lookup_field = 'id'
+    
+    def get_queryset(self):
+        return Entreprise.objects.filter(est_valide=True)
 
 
 class EntrepriseServicesPublicView(generics.ListAPIView):
@@ -37,7 +61,7 @@ class EntrepriseServicesPublicView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        entreprise_id = self.kwargs.get('pk')
+        entreprise_id = self.kwargs.get('id')
         return Service.objects.filter(entreprise_id=entreprise_id, est_actif=True)
 
 
@@ -46,7 +70,7 @@ class EntrepriseDisponibilitesPublicView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        entreprise_id = self.kwargs.get('pk')
+        entreprise_id = self.kwargs.get('id')
         qs = Disponibilite.objects.filter(entreprise_id=entreprise_id)
         date = self.request.query_params.get('date')
         if date:
@@ -59,4 +83,8 @@ class MonProfilView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsEntreprise]
 
     def get_object(self):
-        return Entreprise.objects.get(user=self.request.user)
+        try:
+            return Entreprise.objects.get(user=self.request.user)
+        except Entreprise.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Profil entreprise introuvable.')

@@ -21,6 +21,9 @@ export default function EntrepriseDetailsPage() {
   const [disponibilites, setDisponibilites] = useState([])
   const [dateFilter, setDateFilter] = useState('')
   const [selectedService, setSelectedService] = useState(null)
+  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [showReservationForm, setShowReservationForm] = useState(false)
+  const [reservationComment, setReservationComment] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -37,7 +40,8 @@ export default function EntrepriseDetailsPage() {
         getEntrepriseServices(id)
       ])
       setEntreprise(ent)
-      setServices(serv)
+      const servicesResults = Array.isArray(serv) ? serv : (serv?.results || [])
+      setServices(servicesResults)
     } catch (err) {
       console.error(err)
       setError('Erreur lors du chargement des données.')
@@ -51,7 +55,8 @@ export default function EntrepriseDetailsPage() {
     try {
       setLoading(true)
       const data = await getEntrepriseDisponibilites(id, dateFilter)
-      setDisponibilites(data)
+      const results = Array.isArray(data) ? data : (data?.results || [])
+      setDisponibilites(results)
     } catch (err) {
       console.error(err)
       setError('Erreur lors du chargement des disponibilités.')
@@ -60,27 +65,46 @@ export default function EntrepriseDetailsPage() {
     }
   }
 
-  const handleReserve = async (slot) => {
-    setError(null)
-    setSuccess(null)
+  const handleReserveClick = (slot) => {
     if (!isAuthenticated || role !== 'client') {
       setError('Vous devez être connecté en tant que client pour réserver.')
       return
     }
     if (!selectedService) {
-      setError('Veuillez d’abord choisir un service.')
+      setError("Veuillez d'abord choisir un service.")
       return
     }
+    setSelectedSlot(slot)
+    setShowReservationForm(true)
+  }
+
+  const handleReserve = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    
+    if (!selectedService || !selectedSlot) {
+      setError('Veuillez sélectionner un service et un créneau.')
+      return
+    }
+    
     try {
       const payload = {
         entreprise_id: Number(id),
         service_id: selectedService.id,
-        date: slot.date,
-        heure_debut: slot.heure_debut,
-        commentaire_client: ''
+        date: selectedSlot.date,
+        heure_debut: selectedSlot.heure_debut,
+        commentaire_client: reservationComment
       }
       await createReservation(payload)
       setSuccess('Réservation créée avec succès (en attente de confirmation).')
+      setShowReservationForm(false)
+      setSelectedSlot(null)
+      setReservationComment('')
+      // Recharger les disponibilités
+      if (dateFilter) {
+        loadDisponibilites()
+      }
     } catch (err) {
       console.error(err)
       setError('Erreur lors de la création de la réservation.')
@@ -101,15 +125,74 @@ export default function EntrepriseDetailsPage() {
 
   return (
     <div className="container py-4">
-      <h2 className="mb-3">{entreprise.nom}</h2>
-      <p className="mb-1">
-        <i className="bi bi-geo-alt me-1" />
-        {entreprise.ville} — {entreprise.adresse}
-      </p>
-      <p className="mb-1">
-        <strong>Domaine :</strong> {entreprise.domaine}
-      </p>
-      <p className="mb-3 text-muted">{entreprise.description}</p>
+      {/* Header de l'entreprise */}
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-body p-4">
+          <div className="row">
+            <div className="col-md-8">
+              <h2 className="mb-3 fw-bold">
+                <i className="bi bi-building me-2 text-primary" />
+                {entreprise.nom || 'Entreprise'}
+              </h2>
+              {entreprise.description && (
+                <p className="text-muted mb-3">{entreprise.description}</p>
+              )}
+              
+              <div className="row g-3 mb-3">
+                {entreprise.domaine && (
+                  <div className="col-md-6">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-tag-fill me-2 text-primary" />
+                      <div>
+                        <small className="text-muted d-block">Domaine</small>
+                        <strong>{entreprise.domaine}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {entreprise.ville && (
+                  <div className="col-md-6">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-geo-alt-fill me-2 text-primary" />
+                      <div>
+                        <small className="text-muted d-block">Localisation</small>
+                        <strong>{entreprise.ville}</strong>
+                        {entreprise.adresse && <span className="text-muted"> — {entreprise.adresse}</span>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {entreprise.telephone && (
+                  <div className="col-md-6">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-telephone-fill me-2 text-primary" />
+                      <div>
+                        <small className="text-muted d-block">Téléphone</small>
+                        <strong>{entreprise.telephone}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="col-md-4 text-end">
+              <div className="d-flex flex-column align-items-end gap-2">
+                {entreprise.est_valide ? (
+                  <span className="badge bg-success px-3 py-2">
+                    <i className="bi bi-check-circle-fill me-1" />
+                    Entreprise validée
+                  </span>
+                ) : (
+                  <span className="badge bg-warning text-dark px-3 py-2">
+                    <i className="bi bi-clock-fill me-1" />
+                    En attente de validation
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="row">
         <div className="col-md-6">
@@ -167,18 +250,78 @@ export default function EntrepriseDetailsPage() {
                     Capacité : {slot.capacite}
                   </small>
                 </div>
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => handleReserve(slot)}
-                >
-                  Réserver
-                </button>
+                {isAuthenticated && role === 'client' ? (
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => handleReserveClick(slot)}
+                  >
+                    Réserver
+                  </button>
+                ) : (
+                  <span className="text-muted">Connectez-vous pour réserver</span>
+                )}
               </li>
             ))}
             {!loading && disponibilites.length === 0 && (
               <li className="list-group-item">Aucun créneau disponible.</li>
             )}
           </ul>
+
+          {showReservationForm && selectedSlot && (
+            <div className="card mt-3">
+              <div className="card-header">
+                <h5 className="mb-0">Formulaire de réservation</h5>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handleReserve}>
+                  <div className="mb-3">
+                    <label className="form-label">Service sélectionné</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={selectedService?.nom || ''}
+                      disabled
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Date et heure</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={`${formatDate(selectedSlot.date)} à ${formatTime(selectedSlot.heure_debut)} - ${formatTime(selectedSlot.heure_fin)}`}
+                      disabled
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Commentaire (optionnel)</label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      value={reservationComment}
+                      onChange={(e) => setReservationComment(e.target.value)}
+                      placeholder="Ajoutez un commentaire pour votre réservation..."
+                    />
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button type="submit" className="btn btn-primary">
+                      Confirmer la réservation
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => {
+                        setShowReservationForm(false)
+                        setSelectedSlot(null)
+                        setReservationComment('')
+                      }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

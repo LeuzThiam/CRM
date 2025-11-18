@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import SidebarEntreprise from '../../components/layout/SidebarEntreprise'
 import {
-  getEntrepriseDisponibilitesMe,
-  createEntrepriseDisponibilite,
-  deleteEntrepriseDisponibilite
+  getMesDisponibilites,
+  createDisponibilite,
+  deleteDisponibilite
 } from '../../services/entrepriseApi'
 import Loader from '../../components/ui/Loader'
 import Alert from '../../components/ui/Alert'
 import { formatDate, formatTime } from '../../utils/dateUtils'
+import { extractResults } from '../../utils/pagination'
 
 export default function EntrepriseDisponibilitesPage() {
   const [slots, setSlots] = useState([])
@@ -27,8 +28,9 @@ export default function EntrepriseDisponibilitesPage() {
   async function loadSlots() {
     try {
       setLoading(true)
-      const data = await getEntrepriseDisponibilitesMe()
-      setSlots(data)
+      const data = await getMesDisponibilites()
+      const results = extractResults(data)
+      setSlots(results)
     } catch (err) {
       console.error(err)
       setError('Erreur lors du chargement des disponibilités.')
@@ -45,7 +47,7 @@ export default function EntrepriseDisponibilitesPage() {
     e.preventDefault()
     setError(null)
     try {
-      await createEntrepriseDisponibilite(form)
+      await createDisponibilite(form)
       setForm({ date: '', heure_debut: '', heure_fin: '', capacite: 1 })
       await loadSlots()
     } catch (err) {
@@ -57,7 +59,7 @@ export default function EntrepriseDisponibilitesPage() {
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce créneau ?')) return
     try {
-      await deleteEntrepriseDisponibilite(id)
+      await deleteDisponibilite(id)
       await loadSlots()
     } catch (err) {
       console.error(err)
@@ -66,12 +68,12 @@ export default function EntrepriseDisponibilitesPage() {
   }
 
   return (
-    <div className="container py-4">
+    <div className="container-fluid py-4">
       <div className="row">
-        <div className="col-md-3">
+        <div className="col-md-3 col-lg-2">
           <SidebarEntreprise />
         </div>
-        <div className="col-md-9">
+        <div className="col-md-9 col-lg-10">
           <h3 className="mb-3">Mes disponibilités</h3>
           {error && <Alert type="danger">{error}</Alert>}
 
